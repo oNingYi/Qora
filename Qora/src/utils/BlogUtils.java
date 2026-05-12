@@ -34,10 +34,6 @@ import database.DBSet;
 import database.PostCommentMap;
 
 public class BlogUtils {
-
-	/** Page size for server-side blog pagination (web UI). */
-	public static final int BLOG_PAGE_SIZE = 10;
-
 	/**
 	 * 
 	 * @return triplet of name, title, description of all enabled blogs.
@@ -148,39 +144,6 @@ public class BlogUtils {
 		return results;
 	}
 
-	public static List<BlogEntry> getHashTagPosts(String hashtag, int limit, int offset) {
-		List<BlogEntry> full = getHashTagPosts(hashtag);
-		if (offset < 0)
-			offset = 0;
-		if (offset >= full.size())
-			return new ArrayList<>();
-		int end = limit < 0 ? full.size() : Math.min(offset + limit, full.size());
-		return new ArrayList<>(full.subList(offset, end));
-	}
-
-	public static int countHashTagPosts(String hashtag) {
-		List<byte[]> list = DBSet.getInstance().getHashtagPostMap().get(hashtag);
-		if (list == null)
-			return 0;
-		int n = 0;
-		for (byte[] bs : list) {
-			if (getBlogEntryOpt(bs) != null)
-				n++;
-		}
-		return n;
-	}
-
-	public static int getHashTagPostIndex(String hashtag, String signatureBase58) {
-		if (StringUtils.isEmpty(signatureBase58))
-			return -1;
-		List<BlogEntry> full = getHashTagPosts(hashtag);
-		for (int i = 0; i < full.size(); i++) {
-			if (signatureBase58.equals(full.get(i).getSignature()))
-				return i;
-		}
-		return -1;
-	}
-
 	public static List<String> getHashTags(String text) {
 		List<String> extractHashtags = new Extractor().extractHashtags(text);
 		List<String> result = new ArrayList<String>();
@@ -202,7 +165,7 @@ public class BlogUtils {
 	}
 
 	public static List<BlogEntry> getBlogPosts(String blogOpt) {
-		return getBlogPosts(blogOpt, -1, 0);
+		return getBlogPosts(blogOpt, -1);
 	}
 
 	public static List<BlogEntry> getCommentBlogPosts(String signatureOfBlogPost) {
@@ -260,21 +223,7 @@ public class BlogUtils {
 	}
 
 	public static List<BlogEntry> getBlogPosts(String blogOpt, int limit) {
-		return getBlogPosts(blogOpt, limit, 0);
-	}
-
-	/**
-	 * Blog posts for one blog, newest first (after map reversal), respecting blacklist.
-	 * MapDB stores signatures per blog (not SQL); limit/offset are applied while scanning.
-	 *
-	 * @param limit  max posts to return; if negative, no upper bound
-	 * @param offset number of allowed posts to skip from the start
-	 */
-	public static List<BlogEntry> getBlogPosts(String blogOpt, int limit, int offset) {
 		List<BlogEntry> results = new ArrayList<>();
-
-		if (offset < 0)
-			offset = 0;
 
 		List<byte[]> blogPostList = DBSet.getInstance().getBlogPostMap().get(blogOpt == null ? "QORA" : blogOpt);
 
@@ -284,15 +233,16 @@ public class BlogUtils {
 
 		List<ArbitraryTransaction> blogPostTX = new ArrayList<>();
 
-		for (byte[] blogArbTx : list) {
-			Transaction transaction = Controller.getInstance().getTransaction(blogArbTx);
+		if (list != null) {
+			for (byte[] blogArbTx : list) {
+				Transaction transaction = Controller.getInstance().getTransaction(blogArbTx);
 
-			if (transaction != null)
-				blogPostTX.add((ArbitraryTransaction) transaction);
+				if (transaction != null)
+					blogPostTX.add((ArbitraryTransaction) transaction);
+			}
 		}
 
-		int skipped = 0;
-		int collected = 0;
+		int i = 0;
 
 		for (ArbitraryTransaction transaction : blogPostTX) {
 			String creator = transaction.getCreator().getAddress();
@@ -301,105 +251,26 @@ public class BlogUtils {
 
 			BlogEntry blogEntry = getBlogEntryOpt(transaction);
 
+			String nameOpt;
+
 			if (blogEntry != null) {
-				String nameOpt;
 				if (blogEntry.getShareAuthorOpt() != null)
 					nameOpt = blogEntry.getShareAuthorOpt();
 				else
 					nameOpt = blogEntry.getNameOpt();
 
 				if (blogBlackWhiteList.isAllowedPost(nameOpt != null ? nameOpt : creator, creator)) {
-					if (skipped < offset) {
-						skipped++;
-						continue;
-					}
 					results.add(blogEntry);
-					collected++;
-					if (limit >= 0 && collected >= limit)
-						break;
+					i++;
 				}
 			}
+
+			if (i == limit)
+				break;
 		}
 
 		return results;
-	}
 
-	/** Count of allowed posts for one blog (same rules as {@link #getBlogPosts(String, int, int)}). */
-	public static int countBlogPosts(String blogOpt) {
-		int n = 0;
-		List<byte[]> blogPostList = DBSet.getInstance().getBlogPostMap().get(blogOpt == null ? "QORA" : blogOpt);
-		List<byte[]> list = blogPostList != null ? Lists.newArrayList(blogPostList) : new ArrayList<byte[]>();
-		Collections.reverse(list);
-		for (byte[] blogArbTx : list) {
-			Transaction transaction = Controller.getInstance().getTransaction(blogArbTx);
-			if (transaction == null)
-				continue;
-			ArbitraryTransaction atx = (ArbitraryTransaction) transaction;
-			String creator = atx.getCreator().getAddress();
-			BlogBlackWhiteList blogBlackWhiteList = BlogBlackWhiteList.getBlogBlackWhiteList(blogOpt);
-			BlogEntry blogEntry = getBlogEntryOpt(atx);
-			if (blogEntry != null) {
-				String nameOpt = blogEntry.getShareAuthorOpt() != null ? blogEntry.getShareAuthorOpt() : blogEntry.getNameOpt();
-				if (blogBlackWhiteList.isAllowedPost(nameOpt != null ? nameOpt : creator, creator))
-					n++;
-			}
-		}
-		return n;
-	}
-
-	/**
-	 * 0-based index of a post (by transaction signature) in the filtered list for this blog, or -1.
-	 */
-	public static int getBlogPostIndex(String blogOpt, String signatureBase58) {
-		if (StringUtils.isEmpty(signatureBase58))
-			return -1;
-		int idx = 0;
-		List<byte[]> blogPostList = DBSet.getInstance().getBlogPostMap().get(blogOpt == null ? "QORA" : blogOpt);
-		List<byte[]> list = blogPostList != null ? Lists.newArrayList(blogPostList) : new ArrayList<byte[]>();
-		Collections.reverse(list);
-		for (byte[] blogArbTx : list) {
-			Transaction transaction = Controller.getInstance().getTransaction(blogArbTx);
-			if (transaction == null)
-				continue;
-			ArbitraryTransaction atx = (ArbitraryTransaction) transaction;
-			String creator = atx.getCreator().getAddress();
-			BlogBlackWhiteList blogBlackWhiteList = BlogBlackWhiteList.getBlogBlackWhiteList(blogOpt);
-			BlogEntry blogEntry = getBlogEntryOpt(atx);
-			if (blogEntry != null) {
-				String nameOpt = blogEntry.getShareAuthorOpt() != null ? blogEntry.getShareAuthorOpt() : blogEntry.getNameOpt();
-				if (blogBlackWhiteList.isAllowedPost(nameOpt != null ? nameOpt : creator, creator)) {
-					if (signatureBase58.equals(blogEntry.getSignature()))
-						return idx;
-					idx++;
-				}
-			}
-		}
-		return -1;
-	}
-
-	public static List<BlogEntry> getBlogPosts(List<String> blogList, int limit, int offset) {
-		List<BlogEntry> merged = getBlogPosts(blogList);
-		if (offset < 0)
-			offset = 0;
-		if (offset >= merged.size())
-			return new ArrayList<>();
-		int end = limit < 0 ? merged.size() : Math.min(offset + limit, merged.size());
-		return new ArrayList<>(merged.subList(offset, end));
-	}
-
-	public static int countBlogPosts(List<String> blogList) {
-		return getBlogPosts(blogList).size();
-	}
-
-	public static int getMergedBlogPostIndex(List<String> blogList, String signatureBase58) {
-		if (StringUtils.isEmpty(signatureBase58))
-			return -1;
-		List<BlogEntry> merged = getBlogPosts(blogList);
-		for (int i = 0; i < merged.size(); i++) {
-			if (signatureBase58.equals(merged.get(i).getSignature()))
-				return i;
-		}
-		return -1;
 	}
 
 	public static void processBlogPost(byte[] data, byte[] signature, PublicKeyAccount creator, DBSet db) {
@@ -805,4 +676,3 @@ public class BlogUtils {
 		return creator;
 	}
 }
-
