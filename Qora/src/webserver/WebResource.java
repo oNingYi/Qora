@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -21,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2170,9 +2168,6 @@ public class WebResource {
 			pebbleHelper.getContextMap().put("blogenabled", true);
 
 			if (StringUtils.isEmpty(msg)) {
-				pebbleHelper.getContextMap().put("blogposts", new ArrayList<BlogEntry>());
-				LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-				putBlogPagination(pebbleHelper, "/index/showpost.html", pageQuery, 1, 0);
 				return Response.ok(pebbleHelper.evaluate(),
 						"text/html; charset=utf-8").build();
 			}
@@ -2186,11 +2181,6 @@ public class WebResource {
 
 			if (blogEntryOpt == null) {
 				// TODO SHOW NOT FOUND MESSAGE
-				pebbleHelper.getContextMap().put("blogposts", new ArrayList<BlogEntry>());
-				LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-				if (msg != null)
-					pageQuery.put("msg", msg);
-				putBlogPagination(pebbleHelper, "/index/showpost.html", pageQuery, 1, 0);
 				return Response.ok(pebbleHelper.evaluate(),
 						"text/html; charset=utf-8").build();
 			}
@@ -2198,16 +2188,6 @@ public class WebResource {
 					.getActiveProfileOpt(request);
 
 			String signature = blogEntryOpt.getSignature();
-
-			pebbleHelper.getContextMap().put("blogname",
-					blogEntryOpt.getBlognameOpt() != null ? blogEntryOpt.getBlognameOpt() : blogEntryOpt.nameOrCreator);
-			Profile headerProfile = blogEntryOpt.getProfileOpt();
-			if (headerProfile == null)
-				headerProfile = activeProfileOpt;
-			if (headerProfile != null) {
-				pebbleHelper.getContextMap().put("blogprofile", headerProfile);
-				pebbleHelper.getContextMap().put("follower", headerProfile.getFollower());
-			}
 
 			addSharingAndLiking(blogEntryOpt, signature);
 			if (activeProfileOpt != null) {
@@ -2217,11 +2197,6 @@ public class WebResource {
 
 			pebbleHelper.getContextMap().put("blogposts",
 					Arrays.asList(blogEntryOpt));
-
-			LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-			if (msg != null)
-				pageQuery.put("msg", msg);
-			putBlogPagination(pebbleHelper, "/index/showpost.html", pageQuery, 1, 1);
 
 			return Response.ok(pebbleHelper.evaluate(),
 					"text/html; charset=utf-8").build();
@@ -2279,19 +2254,7 @@ public class WebResource {
 					profile.getFollowedBlogs());
 			followedBlogs.add(blogname);
 
-			int page = parseBlogPageRequestParameter();
-			if (StringUtils.isNotBlank(msg)) {
-				int idx = BlogUtils.getMergedBlogPostIndex(followedBlogs, msg);
-				if (idx >= 0)
-					page = (idx / BlogUtils.BLOG_PAGE_SIZE) + 1;
-			}
-			int totalCount = BlogUtils.countBlogPosts(followedBlogs);
-			int totalPages = totalCount <= 0 ? 1 : (int) Math.ceil((double) totalCount / BlogUtils.BLOG_PAGE_SIZE);
-			if (page > totalPages)
-				page = totalPages;
-			int offset = (page - 1) * BlogUtils.BLOG_PAGE_SIZE;
-
-			List<BlogEntry> blogPosts = BlogUtils.getBlogPosts(followedBlogs, BlogUtils.BLOG_PAGE_SIZE, offset);
+			List<BlogEntry> blogPosts = BlogUtils.getBlogPosts(followedBlogs);
 
 			Profile activeProfileOpt = ProfileHelper.getInstance()
 					.getActiveProfileOpt(request);
@@ -2306,10 +2269,6 @@ public class WebResource {
 			}
 
 			pebbleHelper.getContextMap().put("blogposts", blogPosts);
-
-			LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-			pageQuery.put("blogname", blogname);
-			putBlogPagination(pebbleHelper, "/index/mergedblog.html", pageQuery, page, totalCount);
 
 			return Response.ok(pebbleHelper.evaluate(),
 					"text/html; charset=utf-8").build();
@@ -2344,122 +2303,32 @@ public class WebResource {
 		}
 	}
 
-	private int parseBlogPageRequestParameter() {
-		String p = request.getParameter("page");
-		if (StringUtils.isBlank(p))
-			return 1;
-		try {
-			int page = Integer.parseInt(p.trim());
-			return page < 1 ? 1 : page;
-		} catch (NumberFormatException e) {
-			return 1;
-		}
-	}
-
-	private void putBlogPagination(PebbleHelper pebbleHelper, String pagePath,
-			LinkedHashMap<String, String> queryParamsForLinks, int page, int totalCount) {
-		int pageSize = BlogUtils.BLOG_PAGE_SIZE;
-		int totalPages = totalCount <= 0 ? 1 : (int) Math.ceil((double) totalCount / pageSize);
-		if (page > totalPages)
-			page = totalPages;
-		if (page < 1)
-			page = 1;
-
-		pebbleHelper.getContextMap().put("blogPaginationPage", page);
-		pebbleHelper.getContextMap().put("blogPaginationPageSize", pageSize);
-		pebbleHelper.getContextMap().put("blogPaginationTotalCount", totalCount);
-		pebbleHelper.getContextMap().put("blogPaginationTotalPages", totalPages);
-		pebbleHelper.getContextMap().put("blogPaginationHasPrev", page > 1);
-		pebbleHelper.getContextMap().put("blogPaginationHasNext", page < totalPages);
-
-		try {
-			if (page > 1) {
-				pebbleHelper.getContextMap().put("blogPaginationPrevUrl",
-						buildBlogPaginationUrl(pagePath, queryParamsForLinks, page - 1));
-			} else {
-				pebbleHelper.getContextMap().put("blogPaginationPrevUrl", "");
-			}
-			if (page < totalPages) {
-				pebbleHelper.getContextMap().put("blogPaginationNextUrl",
-						buildBlogPaginationUrl(pagePath, queryParamsForLinks, page + 1));
-			} else {
-				pebbleHelper.getContextMap().put("blogPaginationNextUrl", "");
-			}
-		} catch (UnsupportedEncodingException e) {
-			LOGGER.error(e.getMessage(), e);
-			pebbleHelper.getContextMap().put("blogPaginationPrevUrl", "");
-			pebbleHelper.getContextMap().put("blogPaginationNextUrl", "");
-		}
-	}
-
-	private String buildBlogPaginationUrl(String pagePath, LinkedHashMap<String, String> queryParams, int page)
-			throws UnsupportedEncodingException {
-		StringBuilder sb = new StringBuilder(pagePath).append("?");
-		boolean first = true;
-		for (Map.Entry<String, String> e : queryParams.entrySet()) {
-			if (e.getValue() == null || e.getValue().isEmpty())
-				continue;
-			if (!first)
-				sb.append('&');
-			first = false;
-			sb.append(e.getKey()).append('=')
-					.append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8.name()));
-		}
-		if (!first)
-			sb.append('&');
-		sb.append("page=").append(page);
-		return sb.toString();
-	}
-
 	@Path("index/hashtag.html")
 	@GET
 	public Response getHashTagPosts() {
 		try {
-			String hashtagParam = request.getParameter("hashtag");
+			String hashtag = request.getParameter("hashtag");
 			String msg = request.getParameter("msg");
 
 			PebbleHelper pebbleHelper = PebbleHelper.getPebbleHelper(
 					"web/blog.html", request, NavbarElements.Searchnavbar);
 			pebbleHelper.getContextMap().put("hideprofile", true);
 			pebbleHelper.getContextMap().put("blogenabled", true);
-			hashtagParam = hashtagParam == null ? "" : hashtagParam;
+			hashtag = hashtag == null ? "" : hashtag;
 
-			if (StringUtils.isEmpty(hashtagParam)) {
-				pebbleHelper.getContextMap().put("blogposts", new ArrayList<BlogEntry>());
-				LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-				pageQuery.put("hashtag", "");
-				putBlogPagination(pebbleHelper, "/index/hashtag.html", pageQuery, 1, 0);
-				pebbleHelper.getContextMap().put("hashtag", "");
-				pebbleHelper.getContextMap().put("blogname", "");
-				Profile headerProfile = ProfileHelper.getInstance().getActiveProfileOpt(request);
-				if (headerProfile != null) {
-					pebbleHelper.getContextMap().put("blogprofile", headerProfile);
-					pebbleHelper.getContextMap().put("follower", headerProfile.getFollower());
-				}
+			if (StringUtils.isEmpty(hashtag)) {
 				return Response.ok(pebbleHelper.evaluate(),
 						"text/html; charset=utf-8").build();
 			}
-			String hashtagKey = hashtagParam.toLowerCase();
+			hashtag = hashtag.toLowerCase();
 
-			String hashtag = "#" + hashtagKey;
+			hashtag = "#" + hashtag;
 
 			if (msg != null) {
 				pebbleHelper.getContextMap().put("msg", msg);
 			}
 
-			int page = parseBlogPageRequestParameter();
-			if (StringUtils.isNotBlank(msg)) {
-				int idx = BlogUtils.getHashTagPostIndex(hashtag, msg);
-				if (idx >= 0)
-					page = (idx / BlogUtils.BLOG_PAGE_SIZE) + 1;
-			}
-			int totalCount = BlogUtils.countHashTagPosts(hashtag);
-			int totalPages = totalCount <= 0 ? 1 : (int) Math.ceil((double) totalCount / BlogUtils.BLOG_PAGE_SIZE);
-			if (page > totalPages)
-				page = totalPages;
-			int offset = (page - 1) * BlogUtils.BLOG_PAGE_SIZE;
-
-			List<BlogEntry> blogPosts = BlogUtils.getHashTagPosts(hashtag, BlogUtils.BLOG_PAGE_SIZE, offset);
+			List<BlogEntry> blogPosts = BlogUtils.getHashTagPosts(hashtag);
 
 			Profile activeProfileOpt = ProfileHelper.getInstance()
 					.getActiveProfileOpt(request);
@@ -2475,17 +2344,6 @@ public class WebResource {
 			}
 
 			pebbleHelper.getContextMap().put("blogposts", blogPosts);
-
-			LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-			pageQuery.put("hashtag", hashtagKey);
-			putBlogPagination(pebbleHelper, "/index/hashtag.html", pageQuery, page, totalCount);
-			pebbleHelper.getContextMap().put("hashtag", hashtagKey);
-			pebbleHelper.getContextMap().put("blogname", hashtag);
-			Profile headerProfile = ProfileHelper.getInstance().getActiveProfileOpt(request);
-			if (headerProfile != null) {
-				pebbleHelper.getContextMap().put("blogprofile", headerProfile);
-				pebbleHelper.getContextMap().put("follower", headerProfile.getFollower());
-			}
 
 			return Response.ok(pebbleHelper.evaluate(),
 					"text/html; charset=utf-8").build();
@@ -2569,12 +2427,6 @@ public class WebResource {
 			} else {
 				pebbleHelper.getContextMap().put("hideprofile", true);
 				pebbleHelper.getContextMap().put("blogenabled", true);
-				pebbleHelper.getContextMap().put("blogname", "QORA");
-				Profile mainBlogHeader = ProfileHelper.getInstance().getActiveProfileOpt(request);
-				if (mainBlogHeader != null) {
-					pebbleHelper.getContextMap().put("blogprofile", mainBlogHeader);
-					pebbleHelper.getContextMap().put("follower", mainBlogHeader.getFollower());
-				}
 			}
 
 			Profile activeProfileOpt = ProfileHelper.getInstance()
@@ -2591,29 +2443,7 @@ public class WebResource {
 							&& activeProfileOpt.getLikedPosts().contains(
 									blogname));
 
-			int page = parseBlogPageRequestParameter();
-			if (StringUtils.isNotBlank(msg) && blogname != null) {
-				int idx = BlogUtils.getBlogPostIndex(blogname, msg);
-				if (idx >= 0)
-					page = (idx / BlogUtils.BLOG_PAGE_SIZE) + 1;
-			}
-
-			LinkedHashMap<String, String> pageQuery = new LinkedHashMap<>();
-			if (blogname != null)
-				pageQuery.put("blogname", blogname);
-
-			int totalCount;
-			if (blogname != null) {
-				totalCount = BlogUtils.countBlogPosts(blogname);
-			} else {
-				totalCount = BlogUtils.countBlogPosts((String) null);
-			}
-			int totalPages = totalCount <= 0 ? 1 : (int) Math.ceil((double) totalCount / BlogUtils.BLOG_PAGE_SIZE);
-			if (page > totalPages)
-				page = totalPages;
-			int offset = (page - 1) * BlogUtils.BLOG_PAGE_SIZE;
-
-			List<BlogEntry> blogPosts = BlogUtils.getBlogPosts(blogname, BlogUtils.BLOG_PAGE_SIZE, offset);
+			List<BlogEntry> blogPosts = BlogUtils.getBlogPosts(blogname);
 
 			for (BlogEntry blogEntry : blogPosts) {
 				String signature = blogEntry.getSignature();
@@ -2626,8 +2456,6 @@ public class WebResource {
 			}
 
 			pebbleHelper.getContextMap().put("blogposts", blogPosts);
-
-			putBlogPagination(pebbleHelper, "/index/blog.html", pageQuery, page, totalCount);
 
 			return Response.ok(pebbleHelper.evaluate(),
 					"text/html; charset=utf-8").build();
