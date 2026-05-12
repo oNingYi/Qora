@@ -10,7 +10,6 @@
     <link href="/index/libs/bootstrap/3/css/theme.css" rel="stylesheet">
     <link href="/index/libs/css/style.css" rel="stylesheet">
     <link href="/index/libs/css/sidebar.css" rel="stylesheet">
-    <link href="/index/libs/css/timeline.css" rel="stylesheet">
     <style type="text/css">
       .media:first-child {
       margin-top: 0;
@@ -237,35 +236,150 @@
       display: flex;
       }
       .blog-posts-container {
-      margin-bottom: 24px;
+      margin-bottom: 32px;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+      }
+      .blog-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      }
+      .blog-post-card {
+      background: #fff;
+      border: 1px solid #e8e8ec;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      }
+      .blog-post-card:hover {
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+      border-color: #dcdce8;
+      }
+      .blog-post-card--highlighted {
+      border-color: #6467FF;
+      box-shadow: 0 0 0 2px rgba(100, 103, 255, 0.25);
+      }
+      .blog-post-card__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 18px 20px 0;
+      }
+      .blog-post-card__avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid #eee;
+      }
+      .blog-post-card__meta {
+      flex: 1;
+      min-width: 0;
+      }
+      .blog-post-card__meta h2 {
+      margin: 0 0 4px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a2e;
+      line-height: 1.35;
+      }
+      .blog-post-card__meta .blog-post-card__time {
+      font-size: 12px;
+      color: #6b7280;
+      }
+      .blog-post-card__shareline {
+      font-size: 12px;
+      color: #4b5563;
+      padding: 0 20px 8px;
+      }
+      .blog-post-card__body {
+      padding: 4px 20px 16px;
+      }
+      .blog-post-card__body .post-header {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      }
+      .blog-post-card__body .post-header a {
+      color: #111827;
+      text-decoration: none;
+      }
+      .blog-post-card__body .post-header a:hover {
+      color: #6467FF;
+      }
+      .blog-post-card__body .post-content {
+      font-size: 15px;
+      line-height: 1.55;
+      color: #374151;
+      margin: 0;
+      word-break: break-word;
+      }
+      .blog-post-card__footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #fafbfc;
+      border-top: 1px solid #f0f0f4;
+      justify-content: space-between;
+      }
+      .blog-post-card__comments {
+      padding: 0 20px 16px;
+      background: #fafbfc;
+      border-top: 1px solid #f0f0f4;
+      }
+      .blog-post-card__comments .commentEntry {
+      padding: 12px 0;
+      border-bottom: 1px solid #ececf2;
+      }
+      .blog-post-card__comments .commentEntry:last-child {
+      border-bottom: 0;
       }
       .blog-pagination-nav {
       clear: both;
-      padding: 20px 0 8px;
+      padding: 24px 0 12px;
       text-align: center;
-      border-top: 1px solid #eee;
-      margin-top: 10px;
+      margin-top: 8px;
+      }
+      .blog-pagination-meta {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 12px;
       }
       .blog-pagination-inner {
-      display: inline-block;
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       }
       .blog-pagination-inner .blog-pagination-btn {
       min-width: 120px;
-      margin: 0 8px;
-      border-color: #ddd;
-      color: #333;
+      margin: 0;
+      border-color: #d1d5db;
+      color: #374151;
+      border-radius: 8px;
+      font-weight: 500;
       }
-      .blog-pagination-inner .blog-pagination-btn:hover,
-      .blog-pagination-inner .blog-pagination-btn:focus {
+      .blog-pagination-inner a.blog-pagination-btn:hover,
+      .blog-pagination-inner a.blog-pagination-btn:focus {
       border-color: #6467FF;
       color: #6467FF;
       background-color: #fff;
+      text-decoration: none;
       }
-      .blog-pagination-inner .blog-pagination-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
+      .blog-post-card .media:first-child {
+      margin-top: 0;
+      padding-left: 0;
+      padding-top: 0;
+      padding-right: 0;
       }
-    </style>
   </head>
   <body>
     <div id="PostModal" class="modal fade">
@@ -287,6 +401,7 @@
       <div class="row">
         <div class="main">
         {% autoescape true%}
+          {% if blogprofile is not empty %}
          	{%if blogprofile.getProfileGraphicOpt() is empty%}
           <div class="tl-profile"><img align="left" src="/index/img/banner_01.png" alt="" class="tl-image-lg">
           {%else%}
@@ -309,69 +424,66 @@
               {%endif%}
               </ul>
             </div>
+          </div>
+          {% endif %}
            {% endautoescape %}
-          </div>        	{{apimessage}} <div id=apimessage></div>
+          {{apimessage}} <div id=apimessage></div>
           {% if blogenabled %}
+          <div style="display:none;"><textarea id="clipboard_textarea" name="clipboard_textarea">hello</textarea></div>
           <div id="blog-posts-container" class="blog-posts-container">
-          <ul class="timeline">{% for blogpost in blogposts %}
-            <li id="{{blogpost.getSignature()}}" class="blog-timeline-post">
-              <div class="timeline-badge primary"><a><i rel="tooltip" title="{{blogpost.creationTime}}" id="" class="glyphicon glyphicon-record"></i></a></div>
-              <div class="timeline-panel">
-                <div class="timeline-heading">
-                  <div class="media">
-                  	{% if blogpost.shareAuthorOpt() is not null %}
-                  	{% if blogpost.getNameOpt() is not null %}
-                  	<h6><span class="glyphicon glyphicon-retweet"></span>  <b><a href="/index/blog.html?blogname={{blogpost.shareAuthorOpt()|escape(strategy="url_param")}}">{{blogpost.shareAuthorOpt()}}</a></b> shared <b><a href="/index/blog.html?blogname={{blogpost.nameOrCreator|escape(strategy="url_param")}}">{{blogpost.nameOrCreator}}</a></b> post</h6>
-                  	{%else%}
-                  	<h6><span class="glyphicon glyphicon-retweet"></span>  <b><a href="/index/blog.html?blogname={{blogpost.shareAuthorOpt()|escape(strategy="url_param")}}">{{blogpost.shareAuthorOpt()}}</a></b> shared <b>{{blogpost.nameOrCreator}}</b> post</h6>
-                  	{%endif%}
-                  	{%endif%}
+          <div class="blog-feed">{% for blogpost in blogposts %}
+            <article id="{{blogpost.getSignature()}}" class="blog-post-card">
+              <div class="blog-post-card__head">
                     {% if blogpost.getProfileOpt() is not null and blogpost.getProfileOpt().isProfileEnabled() %}
-                    <div class="media-left media-middle"><a href="/index/blog.html?blogname={{blogpost.nameOrCreator|escape(strategy="url_param")}}"><img src="{{blogpost.getAvatar()}}" alt="" class="media-object"></a></div>
+                    <a href="/index/blog.html?blogname={{blogpost.nameOrCreator|escape(strategy="url_param")}}"><img src="{{blogpost.getAvatar()}}" alt="" class="blog-post-card__avatar"></a>
                     {%else%}
-                    <div class="media-left media-middle"><img src="{{blogpost.getAvatar()}}" alt="" class="media-object"></div>
+                    <img src="{{blogpost.getAvatar()}}" alt="" class="blog-post-card__avatar">
                     {%endif%}
-                    <div class="media-body">
+                    <div class="blog-post-card__meta">
                     	{% if blogpost.getProfileOpt() is not null and blogpost.getProfileOpt().isProfileEnabled() %}
-                      <h6 class="media-heading"><b><a href="/index/blog.html?blogname={{blogpost.getProfileOpt().getName().getName()|escape(strategy="url_param")}}">{{blogpost.nameOrCreator}}</a></b></h6>{{blogpost.creationTime}}
+                      <h2><a href="/index/blog.html?blogname={{blogpost.getProfileOpt().getName().getName()|escape(strategy="url_param")}}">{{blogpost.nameOrCreator}}</a></h2>
                     	{%else%}
-                      <h6 class="media-heading"><b>{{blogpost.nameOrCreator}}</b></h6>{{blogpost.creationTime}}
+                      <h2>{{blogpost.nameOrCreator}}</h2>
                     	{%endif%}
+                      <div class="blog-post-card__time"><i rel="tooltip" title="{{blogpost.creationTime}}" class="glyphicon glyphicon-time"></i> {{blogpost.creationTime}}</div>
                     </div>
                     <div class="media-right">
                       <div class="btn-group post-actions">
-                        <a class="btn btn-default" href="/index/showpost.html?msg={{blogpost.getSignature()}}">
+                        <a class="btn btn-default btn-sm" href="/index/showpost.html?msg={{blogpost.getSignature()}}">
                           <i class="glyphicon glyphicon-link"></i>
                         </a>
                         {% if blogpost.getShareSignatureOpt() is not null%}
-                          <button class ="btn btn-default" onclick="javascript:processDelete('{{blogpost.getShareSignatureOpt()}}')" >
+                          <button class ="btn btn-default btn-sm" onclick="javascript:processDelete('{{blogpost.getShareSignatureOpt()}}')" >
                             <i class="glyphicon glyphicon-trash" style=""></i>
                           </button>
                         {% else%}
-                          <button class ="btn btn-default" onclick="javascript:processDelete('{{blogpost.getSignature()}}')" >
+                          <button class ="btn btn-default btn-sm" onclick="javascript:processDelete('{{blogpost.getSignature()}}')" >
                             <i class="glyphicon glyphicon-trash" style=""></i>
                           </button>
                           {% endif%}
                       </div>
-                      <div style="display:none;">
-                        <textarea id="clipboard_textarea" name="clipboard_textarea">hello</textarea>
-                      </div>
                   </div>
-
-                    </div>
-                  </div>
-                <div class="timeline-body">
+              </div>
+                  	{% if blogpost.shareAuthorOpt() is not null %}
+              <div class="blog-post-card__shareline">
+                  	{% if blogpost.getNameOpt() is not null %}
+                  	<span class="glyphicon glyphicon-retweet"></span>  <b><a href="/index/blog.html?blogname={{blogpost.shareAuthorOpt()|escape(strategy="url_param")}}">{{blogpost.shareAuthorOpt()}}</a></b> shared <b><a href="/index/blog.html?blogname={{blogpost.nameOrCreator|escape(strategy="url_param")}}">{{blogpost.nameOrCreator}}</a></b> post
+                  	{%else%}
+                  	<span class="glyphicon glyphicon-retweet"></span>  <b><a href="/index/blog.html?blogname={{blogpost.shareAuthorOpt()|escape(strategy="url_param")}}">{{blogpost.shareAuthorOpt()}}</a></b> shared <b>{{blogpost.nameOrCreator}}</b> post
+                  	{%endif%}
+              </div>
+                  	{%endif%}
+                <div class="blog-post-card__body">
                   <a href="/index/showpost.html?msg={{blogpost.getSignature()}}"><p class="post-header"><b>{{blogpost.titleOpt}}</b></a></p>
                   <p class="post-content">{{blogpost.description}}</p>
                 </div>
-                <div class="timeline-footer">
-                  <a><span onclick="javascript:processLike('{{blogpost.getSignature()}}', {{blogpost.isLiking()}})" ><i class="glyphicon glyphicon-heart" style=""><font color=white>.</font>{{blogpost.getLikes()}}</i></a>
-                  <a class="pull-right"><span onclick="javascript:processShare('{{blogpost.getSignature()}}' , '{{blogpost.getBlognameOpt()|escape(strategy="js")}}')" ><i class="glyphicon glyphicon-share"><font color=white>.</font>{{blogpost.getShares()}}</i></a>
-                   
-				   <div class="commentList">
+                <div class="blog-post-card__footer">
+                  <a class="btn btn-link btn-sm" style="padding-left:0;color:#6467FF;"><span onclick="javascript:processLike('{{blogpost.getSignature()}}', {{blogpost.isLiking()}})" ><i class="glyphicon glyphicon-heart"></i> {{blogpost.getLikes()}}</span></a>
+                  <a class="btn btn-link btn-sm" style="padding-right:0;color:#6467FF;"><span onclick="javascript:processShare('{{blogpost.getSignature()}}' , '{{blogpost.getBlognameOpt()|escape(strategy="js")}}')" ><i class="glyphicon glyphicon-share"></i> {{blogpost.getShares()}}</span></a>
+                </div>
+				   <div class="blog-post-card__comments commentList">
                    {% for comment in blogpost.getComments() %}
-                    <div class="commentEntry">
-                    
+                    <div class="commentEntry media">
 					<div class="media-left">
 					{% if comment.getNameOpt() is not null %}
                       <a href="/index/blog.html?blogname={{comment.nameOrCreator|escape(strategy="url_param")}}">
@@ -384,9 +496,7 @@
                         <img class="media-object commenterImage" src="{{comment.getAvatar()}}" alt="user image">
           			{%endif%}
                       </a>
-					
 					</div>
-					  
 					<div class="media-body">
                       {% if comment.getNameOpt() is not null %}
 						<h4 class="media-heading Commenter"><a href="/index/blog.html?blogname={{comment.nameOrCreator|escape(strategy="url_param")}}">{{comment.nameOrCreator}}</a></h4>
@@ -399,34 +509,40 @@
                         <p class="commentText">{{comment.description}}</p>
                         <span class="date sub-text">{{comment.creationTime}}</span>
 					</div>
-                    
 					<div class="media-right">
-						<button class ="btn btn-default" onclick="javascript:processCommentDelete('{{comment.getSignature()}}')" >
+						<button class ="btn btn-default btn-sm" onclick="javascript:processCommentDelete('{{comment.getSignature()}}')" >
 							<i class="glyphicon glyphicon-trash" style=""></i>
 						</button>
 					</div>
-					
 					</div>
                 {% endfor %}
                 {%if blogprofile is empty or blogprofile.isCommentingAllowed() %}
-                    <form class="form-inline" role="form">
+                    <form class="form-inline" role="form" style="padding-top:8px;">
                       <div class="form-group">
-                        <a style="cursor: pointer;" onclick="javascript:showCommentForm('{{blogpost.getSignature()}}');" class="translate">Comment</a>
+                        <a style="cursor: pointer; color:#6467FF;" onclick="javascript:showCommentForm('{{blogpost.getSignature()}}');" class="translate">Comment</a>
                       </div>
                     </form>
                 {%endif%}
                 </div>
-              </div>
-              </div>
-            </li>			{% endfor %}
-            <li class="clearfix"></li>
-          </ul>
-          <nav id="blog-pagination-nav" class="blog-pagination-nav"{% if blogposts.size() < 11 %} style="display: none;"{% endif %} aria-label="Blog posts pagination">
+            </article>			{% endfor %}
+          </div>
+          {% if blogPaginationTotalPages > 1 %}
+          <nav id="blog-pagination-nav" class="blog-pagination-nav" aria-label="Blog posts pagination">
+            <div class="blog-pagination-meta"><span class="translate">Page</span> {{ blogPaginationPage }} / {{ blogPaginationTotalPages }} <span class="translate">of</span> {{ blogPaginationTotalCount }} <span class="translate">posts</span></div>
             <div class="blog-pagination-inner">
-              <button type="button" id="blog-pagination-prev" class="btn btn-default blog-pagination-btn"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> <span class="translate">Previous</span></button>
-              <button type="button" id="blog-pagination-next" class="btn btn-default blog-pagination-btn"><span class="translate">Next</span> <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></button>
+              {% if blogPaginationHasPrev %}
+              <a class="btn btn-default blog-pagination-btn" href="{{ blogPaginationPrevUrl }}"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> <span class="translate">Previous</span></a>
+              {% else %}
+              <span class="btn btn-default blog-pagination-btn disabled"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> <span class="translate">Previous</span></span>
+              {% endif %}
+              {% if blogPaginationHasNext %}
+              <a class="btn btn-default blog-pagination-btn" href="{{ blogPaginationNextUrl }}"><span class="translate">Next</span> <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a>
+              {% else %}
+              <span class="btn btn-default blog-pagination-btn disabled"><span class="translate">Next</span> <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></span>
+              {% endif %}
             </div>
           </nav>
+          {% endif %}
           </div>
           {%else%}
           <ul class="timeline">
@@ -832,99 +948,6 @@
         }
     };
 
-    var BLOG_POSTS_PAGE_SIZE = 10;
-    var blogPaginationCurrentPage = 0;
-    {% if msg is not null %}
-    var blogDeepLinkMsgId = '{{ msg|escape(strategy="js") }}';
-    {% else %}
-    var blogDeepLinkMsgId = null;
-    {% endif %}
-
-    function blogFindPostIndexById(signature) {
-        if (!signature) {
-            return -1;
-        }
-        var idx = -1;
-        $('.blog-timeline-post').each(function(i) {
-            if (this.id === signature) {
-                idx = i;
-                return false;
-            }
-        });
-        return idx;
-    }
-
-    function blogApplyTimelineInverted() {
-        var $posts = $('.blog-timeline-post');
-        $posts.removeClass('timeline-inverted');
-        if ($posts.length <= 1) {
-            return;
-        }
-        $posts.filter(':visible').each(function(i) {
-            if (i % 2 === 1) {
-                $(this).addClass('timeline-inverted');
-            }
-        });
-    }
-
-    function blogGoToPage(page) {
-        var $posts = $('.blog-timeline-post');
-        var total = $posts.length;
-        if (total === 0) {
-            return;
-        }
-        var maxPage = Math.max(0, Math.ceil(total / BLOG_POSTS_PAGE_SIZE) - 1);
-        page = Math.max(0, Math.min(maxPage, page));
-        blogPaginationCurrentPage = page;
-        var start = page * BLOG_POSTS_PAGE_SIZE;
-        $posts.each(function(i) {
-            $(this).toggle(i >= start && i < start + BLOG_POSTS_PAGE_SIZE);
-        });
-        $('#blog-pagination-prev').prop('disabled', page === 0);
-        $('#blog-pagination-next').prop('disabled', page >= maxPage);
-        blogApplyTimelineInverted();
-    }
-
-    function blogScrollToPostsContainer() {
-        var $c = $('#blog-posts-container');
-        if (!$c.length) {
-            return;
-        }
-        var top = $c.offset().top;
-        var pad = 55;
-        $('html, body').animate({ scrollTop: Math.max(0, top - pad) }, 450);
-    }
-
-    function initBlogPostPagination() {
-        var $nav = $('#blog-pagination-nav');
-        var $posts = $('.blog-timeline-post');
-        if (!$posts.length || !$nav.length) {
-            return;
-        }
-        if ($posts.length <= BLOG_POSTS_PAGE_SIZE) {
-            $nav.hide();
-            blogApplyTimelineInverted();
-            return;
-        }
-        $nav.show();
-        var initialPage = 0;
-        if (typeof blogDeepLinkMsgId === 'string' && blogDeepLinkMsgId.length) {
-            var ix = blogFindPostIndexById(blogDeepLinkMsgId);
-            if (ix >= 0) {
-                initialPage = Math.floor(ix / BLOG_POSTS_PAGE_SIZE);
-            }
-        }
-        blogGoToPage(initialPage);
-        $('#blog-pagination-prev').off('click.blogPager').on('click.blogPager', function() {
-            blogGoToPage(blogPaginationCurrentPage - 1);
-            blogScrollToPostsContainer();
-        });
-        $('#blog-pagination-next').off('click.blogPager').on('click.blogPager', function() {
-            blogGoToPage(blogPaginationCurrentPage + 1);
-            blogScrollToPostsContainer();
-        });
-    }
-
     $(document).ready(function() {
 
    		  $('#name').change(function() {
@@ -954,7 +977,23 @@
             }
         });
 
-        initBlogPostPagination();
+        var params = getSearchParameters();
+        {% if msg is not null %}
+        var $msgEl = $('#{{ msg }}');
+        if ($msgEl.length) {
+            $('html, body').animate({ scrollTop: Math.max(0, $msgEl.offset().top - 55) }, 600);
+        }
+        {% else %}
+        if (params.page !== undefined && params.page !== '') {
+            var pc = parseInt(params.page, 10);
+            if (!isNaN(pc) && pc >= 2) {
+                var $c = $('#blog-posts-container');
+                if ($c.length) {
+                    $('html, body').animate({ scrollTop: Math.max(0, $c.offset().top - 55) }, 450);
+                }
+            }
+        }
+        {% endif %}
 
         var my_posts = $("[rel=tooltip]");
 
@@ -976,13 +1015,8 @@
         }
         {% if hideprofile is not empty%}
       $(".tl-profile").hide();
-      $(".timeline").css("padding-top","40px");
+      $(".blog-posts-container").css("padding-top","12px");
       {%endif%}
-
-      {% if msg is not null %} $('html, body').animate({
-        scrollTop: $("#{{msg}}").offset().top
-    }, 2000);
-    {%endif%}
 
 	  $('#name').val(getSearchParameters().hashtag);
         if (getSearchParameters().hashtag === void 0) {
@@ -1002,16 +1036,13 @@
     $(document).ready(function(){
     {% for blogpost in blogposts %}
     if (window.location.search === '?msg={{blogpost.getSignature()}}') {
-      $('#{{blogpost.getSignature()}} > .timeline-panel').toggleClass("highlighted");
-      $('#{{blogpost.getSignature()}} > .timeline-badge').toggleClass("highlighted");
+      $('#{{blogpost.getSignature()}}').toggleClass("blog-post-card--highlighted");
     };
     if (window.location.search === '?blogname={{blogpost.nameOrCreator|escape(strategy="url_param")}}&msg={{blogpost.getSignature()}}') {
-      $('#{{blogpost.getSignature()}} > .timeline-panel').toggleClass("highlighted");
-      $('#{{blogpost.getSignature()}} > .timeline-badge').toggleClass("highlighted");
+      $('#{{blogpost.getSignature()}}').toggleClass("blog-post-card--highlighted");
    };
     if (window.location.search === '?hashtag={{hashtag}}&msg={{blogpost.getSignature()}}') {
-      $('#{{blogpost.getSignature()}} > .timeline-panel').toggleClass("highlighted");
-      $('#{{blogpost.getSignature()}} > .timeline-badge').toggleClass("highlighted");
+      $('#{{blogpost.getSignature()}}').toggleClass("blog-post-card--highlighted");
    };
     {% endfor %}
 	
